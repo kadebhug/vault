@@ -1,0 +1,46 @@
+node {
+  name = "emqx@{{ ansible_host }}"
+  cookie = "REPLACE_WITH_CLUSTER_COOKIE"
+  data_dir = "/var/lib/emqx"
+}
+
+cluster {
+  name = alarms-emqx-{{ rack }}
+  discovery_strategy = static
+  static {
+    seeds = [
+      {% for host in groups['emqx_' + rack] %}
+      "emqx@{{ hostvars[host]['ansible_host'] }}"{% if not loop.last %},{% endif %}
+
+      {% endfor %}
+    ]
+  }
+}
+
+listeners.tcp.default {
+  bind = "0.0.0.0:1883"
+  max_connections = 500000
+}
+
+listeners.ssl.default {
+  bind = "0.0.0.0:8883"
+  max_connections = 500000
+  ssl_options {
+    cacertfile = "/etc/emqx/ssl/ca.crt"
+    certfile   = "/etc/emqx/ssl/server.crt"
+    keyfile    = "/etc/emqx/ssl/server.key"
+    versions   = ["tlsv1.2"]   # GSM modem compatibility
+  }
+}
+
+mqtt {
+  max_clientid_len = 64
+  keepalive_backoff = 0.75
+  session_expiry_interval = 2h   # retain session for reconnecting GSM devices
+  max_inflight = 32
+  max_awaiting_rel = 100
+  retry_interval = 30s
+}
+
+# Include Kafka bridge config
+include "kafka_bridge.conf"

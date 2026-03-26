@@ -1,0 +1,17 @@
+[Unit]
+Description=Kafka Connect
+After=kafka.service
+Wants=kafka.service
+
+[Service]
+Type=simple
+User={{ kafka_user }}
+Group={{ kafka_group }}
+Environment="KAFKA_HEAP_OPTS=-Xms2g -Xmx2g"
+ExecStart={{ kafka_connect_install_dir }}/bin/connect-distributed.sh {{ kafka_connect_install_dir }}/config/connect-distributed.properties
+Restart=on-failure
+RestartSec=10
+LimitNOFILE=100000
+
+[Install]
+WantedBy=multi-user.target

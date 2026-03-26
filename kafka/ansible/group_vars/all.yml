@@ -1,0 +1,45 @@
+---
+# Kafka version
+kafka_version: "3.7.0"
+kafka_scala_version: "2.13"
+kafka_install_dir: /opt/kafka
+kafka_log_dir: /data/kafka/logs
+kafka_user: kafka
+kafka_group: kafka
+
+# KRaft cluster ID — generate once with: kafka-storage.sh random-uuid
+kafka_kraft_cluster_id: "REPLACE_WITH_GENERATED_UUID"
+
+# All broker addresses (used for bootstrap.servers)
+kafka_bootstrap_servers: >-
+  10.1.0.11:9092,10.1.0.12:9092,10.1.0.13:9092,
+  10.2.0.11:9092,10.2.0.12:9092,10.2.0.13:9092,
+  10.3.0.11:9092,10.3.0.12:9092,10.3.0.13:9092
+
+# All broker controller addresses (KRaft quorum)
+kafka_controller_quorum_voters: >-
+  1@10.1.0.11:9093,2@10.1.0.12:9093,3@10.1.0.13:9093,
+  4@10.2.0.11:9093,5@10.2.0.12:9093,6@10.2.0.13:9093,
+  7@10.3.0.11:9093,8@10.3.0.12:9093,9@10.3.0.13:9093
+
+# Replication
+kafka_default_replication_factor: 3
+kafka_min_insync_replicas: 2
+
+# Retention
+kafka_log_retention_hours: 168       # 7 days
+kafka_log_segment_bytes: 1073741824  # 1GB
+
+# EMQX version
+emqx_version: "5.6.0"
+emqx_install_dir: /opt/emqx
+
+# Kafka Connect
+kafka_connect_version: "{{ kafka_version }}"
+kafka_connect_install_dir: /opt/kafka
+kafka_connect_plugin_dir: /opt/kafka/plugins
+
+# TimescaleDB connection (per DC — override in group_vars/dc1.yml etc.)
+timescale_jdbc_url: "jdbc:postgresql://localhost:5432/alarms"
+timescale_jdbc_user: "alarms_writer"
+timescale_jdbc_password: "REPLACE_WITH_SECRET"  # use ansible-vault in production

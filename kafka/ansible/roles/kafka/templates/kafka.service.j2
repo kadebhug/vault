@@ -1,0 +1,19 @@
+[Unit]
+Description=Apache Kafka (KRaft)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User={{ kafka_user }}
+Group={{ kafka_group }}
+Environment="KAFKA_HEAP_OPTS=-Xms6g -Xmx6g"
+Environment="KAFKA_JVM_PERFORMANCE_OPTS=-server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35"
+ExecStart={{ kafka_install_dir }}/bin/kafka-server-start.sh {{ kafka_install_dir }}/config/kraft/server.properties
+ExecStop={{ kafka_install_dir }}/bin/kafka-server-stop.sh
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=100000
+
+[Install]
+WantedBy=multi-user.target

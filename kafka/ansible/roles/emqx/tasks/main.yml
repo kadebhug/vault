@@ -1,0 +1,44 @@
+---
+- name: Add EMQX apt repository
+  block:
+    - name: Download EMQX apt key
+      get_url:
+        url: https://packages.emqx.com/emqx-ce/emqx.gpg
+        dest: /usr/share/keyrings/emqx.gpg
+        mode: "0644"
+
+    - name: Add EMQX repository
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/emqx.gpg] https://packages.emqx.com/emqx-ce/deb/ubuntu focal main"
+        state: present
+        filename: emqx
+
+- name: Install EMQX
+  apt:
+    name: "emqx={{ emqx_version }}"
+    state: present
+    update_cache: true
+
+- name: Template emqx.conf
+  template:
+    src: emqx.conf.j2
+    dest: /etc/emqx/emqx.conf
+    owner: emqx
+    group: emqx
+    mode: "0640"
+  notify: restart emqx
+
+- name: Template Kafka bridge config
+  template:
+    src: kafka_bridge.conf.j2
+    dest: /etc/emqx/kafka_bridge.conf
+    owner: emqx
+    group: emqx
+    mode: "0640"
+  notify: restart emqx
+
+- name: Enable and start EMQX
+  systemd:
+    name: emqx
+    enabled: true
+    state: started

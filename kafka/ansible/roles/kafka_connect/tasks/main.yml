@@ -1,0 +1,79 @@
+---
+- name: Create Kafka Connect plugin directory
+  file:
+    path: "{{ kafka_connect_plugin_dir }}"
+    state: directory
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: "0755"
+
+- name: Download Confluent JDBC connector
+  get_url:
+    url: "https://packages.confluent.io/maven/io/confluent/kafka-connect-jdbc/10.7.6/kafka-connect-jdbc-10.7.6.jar"
+    dest: "{{ kafka_connect_plugin_dir }}/kafka-connect-jdbc.jar"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+
+- name: Download PostgreSQL JDBC driver
+  get_url:
+    url: "https://jdbc.postgresql.org/download/postgresql-42.7.3.jar"
+    dest: "{{ kafka_connect_plugin_dir }}/postgresql.jar"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+
+- name: Template connect-distributed.properties
+  template:
+    src: connect-distributed.properties.j2
+    dest: "{{ kafka_connect_install_dir }}/config/connect-distributed.properties"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: "0640"
+  notify: restart kafka-connect
+
+- name: Install Kafka Connect systemd service
+  template:
+    src: kafka-connect.service.j2
+    dest: /etc/systemd/system/kafka-connect.service
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart kafka-connect
+
+- name: Enable and start Kafka Connect
+  systemd:
+    name: kafka-connect
+    enabled: true
+    state: started
+
+- name: Wait for Kafka Connect REST API
+  uri:
+    url: "http://localhost:8083/connectors"
+    status_code: 200
+  register: connect_ready
+  retries: 12
+  delay: 10
+  until: connect_ready.status == 200
+
+- name: Deploy alarms DB sink connector
+  uri:
+    url: "http://localhost:8083/connectors"
+    method: POST
+    body_format: json
+    body:
+      name: alarms-db-sink
+      config:
+        connector.class: io.confluent.connect.jdbc.JdbcSinkConnector
+        tasks.max: "9"
+        topics: alarms.enriched
+        connection.url: "{{ timescale_jdbc_url }}"
+        connection.user: "{{ timescale_jdbc_user }}"
+        connection.password: "{{ timescale_jdbc_password }}"
+        insert.mode: insert
+        pk.mode: record_value
+        pk.fields: "device_id,alarm_timestamp,alarm_type"
+        auto.create: "false"
+        errors.tolerance: all
+        errors.deadletterqueue.topic.name: alarms.dlq
+        errors.deadletterqueue.topic.replication.factor: "3"
+        consumer.override.max.poll.records: "500"
+    status_code: [200, 201, 409]   # 409 = already exists, that's fine

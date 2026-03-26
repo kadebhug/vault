@@ -1,0 +1,28 @@
+bridges.kafka.alarms_producer {
+  enable = true
+  bootstrap_hosts = "{{ kafka_bootstrap_servers | replace('\n', '') | replace(' ', '') }}"
+  connect_timeout = 5s
+
+  producer {
+    # Route all alarm topics to alarms.raw
+    topic_mapping = [
+      {
+        mqtt_topic = "alarms/#"
+        kafka_topic = "alarms.raw"
+        qos = 1
+        payload_template = "${payload}"
+      }
+    ]
+
+    partition_strategy = key_dispatch   # partition by MQTT client ID = device_id
+    compression = lz4
+    required_acks = all_isr
+    max_inflight = 10
+
+    buffer {
+      mode = disk                       # survive EMQX restarts
+      per_partition_limit = 256MB
+      segment_bytes = 10MB
+    }
+  }
+}

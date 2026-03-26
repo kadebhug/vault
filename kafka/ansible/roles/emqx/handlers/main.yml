@@ -1,0 +1,5 @@
+---
+- name: restart emqx
+  systemd:
+    name: emqx
+    state: restarted

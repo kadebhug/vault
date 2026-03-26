@@ -1,0 +1,60 @@
+---
+- name: Create Kafka directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: "0755"
+  loop:
+    - "{{ kafka_install_dir }}"
+    - "{{ kafka_log_dir }}"
+
+- name: Download Kafka
+  get_url:
+    url: "https://downloads.apache.org/kafka/{{ kafka_version }}/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tgz"
+    dest: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tgz"
+    checksum: "sha512:https://downloads.apache.org/kafka/{{ kafka_version }}/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tgz.sha512"
+
+- name: Extract Kafka
+  unarchive:
+    src: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tgz"
+    dest: "{{ kafka_install_dir }}"
+    remote_src: true
+    extra_opts: [--strip-components=1]
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    creates: "{{ kafka_install_dir }}/bin/kafka-server-start.sh"
+
+- name: Template server.properties
+  template:
+    src: server.properties.j2
+    dest: "{{ kafka_install_dir }}/config/kraft/server.properties"
+    owner: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    mode: "0640"
+  notify: restart kafka
+
+- name: Format KRaft storage (only if not already formatted)
+  command: >
+    {{ kafka_install_dir }}/bin/kafka-storage.sh format
+    -t {{ kafka_kraft_cluster_id }}
+    -c {{ kafka_install_dir }}/config/kraft/server.properties
+  args:
+    creates: "{{ kafka_log_dir }}/meta.properties"
+  become_user: "{{ kafka_user }}"
+
+- name: Install Kafka systemd service
+  template:
+    src: kafka.service.j2
+    dest: /etc/systemd/system/kafka.service
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart kafka
+
+- name: Enable and start Kafka
+  systemd:
+    name: kafka
+    enabled: true
+    state: started

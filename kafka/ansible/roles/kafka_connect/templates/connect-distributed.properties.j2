@@ -1,0 +1,37 @@
+bootstrap.servers={{ kafka_bootstrap_servers | replace('\n', '') | replace(' ', '') }}
+
+# Worker identity — unique per DC so all 3 connect clusters are independent
+group.id=alarms-connect-{{ rack }}
+
+# Offset / config / status storage topics (auto-created by Connect)
+config.storage.topic=connect-configs-{{ rack }}
+offset.storage.topic=connect-offsets-{{ rack }}
+status.storage.topic=connect-status-{{ rack }}
+
+config.storage.replication.factor=3
+offset.storage.replication.factor=3
+status.storage.replication.factor=3
+
+offset.flush.interval.ms=10000
+
+# Converters — use JSON without schema for simplicity; switch to Avro if schema registry added
+key.converter=org.apache.kafka.connect.json.JsonConverter
+value.converter=org.apache.kafka.connect.json.JsonConverter
+key.converter.schemas.enable=false
+value.converter.schemas.enable=false
+
+# Plugin path
+plugin.path={{ kafka_connect_plugin_dir }}
+
+# REST API
+rest.host.name=0.0.0.0
+rest.port=8083
+
+# Producer settings (matches architecture spec)
+producer.acks=all
+producer.enable.idempotence=true
+producer.compression.type=lz4
+
+# Consumer settings
+consumer.max.poll.records=500
+consumer.auto.offset.reset=earliest

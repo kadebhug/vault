@@ -1,0 +1,27 @@
+---
+- name: Configure Kafka brokers
+  hosts: kafka_brokers
+  become: true
+  roles:
+    - role: common
+    - role: kafka
+
+- name: Configure Kafka Connect
+  hosts: kafka_connect
+  become: true
+  roles:
+    - role: common
+    - role: kafka_connect
+
+- name: Configure EMQX brokers
+  hosts: emqx
+  become: true
+  roles:
+    - role: common
+    - role: emqx
+
+- name: Create Kafka topics
+  hosts: dc1-broker1
+  become: true
+  roles:
+    - role: topics

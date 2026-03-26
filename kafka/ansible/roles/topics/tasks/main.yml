@@ -1,0 +1,64 @@
+---
+- name: Create alarms.raw topic
+  command: >
+    {{ kafka_install_dir }}/bin/kafka-topics.sh
+    --bootstrap-server {{ ansible_host }}:9092
+    --create --if-not-exists
+    --topic alarms.raw
+    --partitions 90
+    --replication-factor 3
+    --config min.insync.replicas=2
+    --config retention.ms=604800000
+    --config compression.type=lz4
+    --config max.message.bytes=10240
+  become_user: "{{ kafka_user }}"
+
+- name: Create alarms.enriched topic
+  command: >
+    {{ kafka_install_dir }}/bin/kafka-topics.sh
+    --bootstrap-server {{ ansible_host }}:9092
+    --create --if-not-exists
+    --topic alarms.enriched
+    --partitions 90
+    --replication-factor 3
+    --config min.insync.replicas=2
+    --config retention.ms=604800000
+    --config compression.type=lz4
+    --config max.message.bytes=10240
+  become_user: "{{ kafka_user }}"
+
+- name: Create alarms.dlq topic
+  command: >
+    {{ kafka_install_dir }}/bin/kafka-topics.sh
+    --bootstrap-server {{ ansible_host }}:9092
+    --create --if-not-exists
+    --topic alarms.dlq
+    --partitions 9
+    --replication-factor 3
+    --config min.insync.replicas=2
+    --config retention.ms=2592000000
+  become_user: "{{ kafka_user }}"
+
+- name: Create alarms.lwt topic
+  command: >
+    {{ kafka_install_dir }}/bin/kafka-topics.sh
+    --bootstrap-server {{ ansible_host }}:9092
+    --create --if-not-exists
+    --topic alarms.lwt
+    --partitions 9
+    --replication-factor 3
+    --config min.insync.replicas=2
+    --config retention.ms=604800000
+  become_user: "{{ kafka_user }}"
+
+- name: List topics (verify)
+  command: >
+    {{ kafka_install_dir }}/bin/kafka-topics.sh
+    --bootstrap-server {{ ansible_host }}:9092
+    --list
+  become_user: "{{ kafka_user }}"
+  register: topic_list
+
+- name: Print topics
+  debug:
+    var: topic_list.stdout_lines

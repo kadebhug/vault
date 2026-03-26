@@ -1,0 +1,46 @@
+---
+- name: Install Java
+  apt:
+    name: openjdk-21-jdk-headless
+    state: present
+    update_cache: true
+
+- name: Create kafka group
+  group:
+    name: "{{ kafka_group }}"
+    system: true
+
+- name: Create kafka user
+  user:
+    name: "{{ kafka_user }}"
+    group: "{{ kafka_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ kafka_install_dir }}"
+    create_home: false
+
+- name: Set vm.swappiness
+  sysctl:
+    name: vm.swappiness
+    value: "1"
+    state: present
+    reload: true
+
+- name: Set vm.dirty_ratio
+  sysctl:
+    name: vm.dirty_ratio
+    value: "80"
+    state: present
+
+- name: Set vm.dirty_background_ratio
+  sysctl:
+    name: vm.dirty_background_ratio
+    value: "5"
+    state: present
+
+- name: Increase open file limits for kafka user
+  copy:
+    dest: /etc/security/limits.d/kafka.conf
+    content: |
+      {{ kafka_user }} soft nofile 100000
+      {{ kafka_user }} hard nofile 100000
